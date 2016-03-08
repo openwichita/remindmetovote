@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -26,9 +27,12 @@ func main() {
 func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 	from := r.FormValue("From")
 	body := strings.ToLower(r.FormValue("Body"))
+	to := r.FormValue("To")
 
-	log.Print("From: ", from)
-	log.Print("Body: ", body)
+	if _, err := db.Exec("insert into message_log (from_number, to_number, body, created_at) values ($1, $2, $3, $4)", from, to, body, time.Now()); err != nil {
+		respondError(rw, err)
+		return
+	}
 
 	switch body {
 	case "sign up", "sign-up", "signup", "subscribe":
