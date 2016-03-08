@@ -46,16 +46,16 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		rw.Write([]byte("You've been subscribed!"))
+		rw.Write([]byte("You've been subscribed! Text STOP to unsubscribe."))
 	case "stop", "remove", "unsubscribe":
 		if _, err := db.Exec("delete from subscriptions where number = $1", from); err != nil {
 			respondError(rw, err)
 			return
 		}
 
-		rw.Write([]byte("You've been unsubscribed!"))
+		rw.Write([]byte("You've been unsubscribed! Text SIGNUP to resubscribe."))
 	default:
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte("Text SIGNUP to subscribe for voting reminders."))
 	}
 }
 
