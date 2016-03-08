@@ -12,15 +12,20 @@ import (
 var db *sql.DB
 
 func main() {
-	var err error
+	c, err := NewConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	db, err = sql.Open("postgres", "postgres://root@localhost/remindmetovote?sslmode=disable")
+	db, err = sql.Open("postgres", c.DB)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	http.HandleFunc("/twilio/incoming", twilioIncomingHandler)
-	http.ListenAndServe(":3927", nil)
+
+	log.Print("Binding to ", c.Bind)
+	log.Fatal(http.ListenAndServe(c.Bind, nil))
 }
 
 func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
