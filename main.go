@@ -47,13 +47,13 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 			respondError(rw, err)
 			return
 		}
-		message = "You've been subscribed! Text STOP to unsubscribe."
+		message = "You've been subscribed to voting reminders! Text STOP to unsubscribe."
 	case "stop", "remove", "unsubscribe":
 		if _, err := db.Exec("delete from subscriptions where number = $1", from); err != nil {
 			respondError(rw, err)
 			return
 		}
-		message = "You've been unsubscribed! Text SIGNUP to resubscribe."
+		message = "You've been unsubscribed! Text SIGNUP to resubscribe to voting reminders."
 	default:
 		message = "Text SIGNUP to subscribe for voting reminders."
 	}
