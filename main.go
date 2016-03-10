@@ -34,7 +34,9 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 	body := strings.ToLower(r.FormValue("Body"))
 	to := r.FormValue("To")
 
-	if _, err := db.Exec("insert into message_log (from_number, to_number, body, created_at) values ($1, $2, $3, $4)", from, to, body, time.Now()); err != nil {
+	var message string
+
+	if err := logMessage(from, to, body); err != nil {
 		respondError(rw, err)
 		return
 	}
@@ -45,21 +47,30 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 			respondError(rw, err)
 			return
 		}
-
-		rw.Write([]byte("You've been subscribed! Text STOP to unsubscribe."))
+		message = "You've been subscribed! Text STOP to unsubscribe."
 	case "stop", "remove", "unsubscribe":
 		if _, err := db.Exec("delete from subscriptions where number = $1", from); err != nil {
 			respondError(rw, err)
 			return
 		}
-
-		rw.Write([]byte("You've been unsubscribed! Text SIGNUP to resubscribe."))
+		message = "You've been unsubscribed! Text SIGNUP to resubscribe."
 	default:
-		rw.Write([]byte("Text SIGNUP to subscribe for voting reminders."))
+		message = "Text SIGNUP to subscribe for voting reminders."
 	}
+
+	if err := logMessage(to, from, message); err != nil {
+		respondError(rw, err)
+		return
+	}
+	rw.Write([]byte(message))
 }
 
 func respondError(rw http.ResponseWriter, err error) {
 	log.Print(err)
-	http.Error(rw, err.Error(), http.StatusInternalServerError)
+	rw.WriteHeader(http.StatusBadRequest)
+}
+
+func logMessage(from string, to string, message string) error {
+	_, err := db.Exec("insert into message_log (from_number, to_number, body, created_at) values ($1, $2, $3, $4)", from, to, message, time.Now())
+	return err
 }
