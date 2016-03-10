@@ -34,7 +34,12 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 	body := strings.ToLower(r.FormValue("Body"))
 	to := r.FormValue("To")
 
-	logMessage(rw, from, to, body)
+	var message string
+
+	if err := logMessage(from, to, body); err != nil {
+		respondError(rw, err)
+		return
+	}
 
 	switch body {
 	case "sign up", "sign-up", "signup", "subscribe":
@@ -42,27 +47,22 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 			respondError(rw, err)
 			return
 		}
-
-		message := "You've been subscribed! Text STOP to unsubscribe."
-		logMessage(rw, to, from, message)
-
-		rw.Write([]byte(message))
+		message = "You've been subscribed! Text STOP to unsubscribe."
 	case "stop", "remove", "unsubscribe":
 		if _, err := db.Exec("delete from subscriptions where number = $1", from); err != nil {
 			respondError(rw, err)
 			return
 		}
-
-		message := "You've been unsubscribed! Text SIGNUP to resubscribe."
-		logMessage(rw, to, from, message)
-
-		rw.Write([]byte(message))
+		message = "You've been unsubscribed! Text SIGNUP to resubscribe."
 	default:
-		message := "Text SIGNUP to subscribe for voting reminders."
-		logMessage(rw, to, from, message)
-
-		rw.Write([]byte(message))
+		message = "Text SIGNUP to subscribe for voting reminders."
 	}
+
+	if err := logMessage(to, from, message); err != nil {
+		respondError(rw, err)
+		return
+	}
+	rw.Write([]byte(message))
 }
 
 func respondError(rw http.ResponseWriter, err error) {
@@ -70,9 +70,7 @@ func respondError(rw http.ResponseWriter, err error) {
 	rw.WriteHeader(http.StatusBadRequest)
 }
 
-func logMessage(rw http.ResponseWriter, from string, to string, message string) {
-	if _, err := db.Exec("insert into message_log (from_number, to_number, body, created_at) values ($1, $2, $3, $4)", from, to, message, time.Now()); err != nil {
-		respondError(rw, err)
-		return
-	}
+func logMessage(from string, to string, message string) error {
+	_, err := db.Exec("insert into message_log (from_number, to_number, body, created_at) values ($1, $2, $3, $4)", from, to, message, time.Now())
+	return err
 }
