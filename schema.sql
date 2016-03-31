@@ -1,6 +1,7 @@
 create table subscriptions (
   id serial,
   number varchar(12) not null
+  CONSTRAINT subscriptions_number_key UNIQUE (number)
 );
 
 create table message_log (
@@ -10,3 +11,6 @@ create table message_log (
   body text not null,
   created_at timestamp not null
 );
+
+ALTER TABLE subscriptions
+ADD CONSTRAINT subscriptions_number_key UNIQUE (number)
