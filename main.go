@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq"
+	pq "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -44,6 +44,13 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 	switch body {
 	case "sign up", "sign-up", "signup", "subscribe":
 		if _, err := db.Exec("insert into subscriptions (number) values ($1)", from); err != nil {
+
+			if err, ok := err.(*pq.Error); ok {
+				if err.Code.Name() == "unique_violation" {
+					respondMessage(rw, "You've all ready been subscribed to voting reminders! Text STOP to unsubscribe.")
+					return
+				}
+			}
 			respondError(rw, err)
 			return
 		}
@@ -62,12 +69,16 @@ func twilioIncomingHandler(rw http.ResponseWriter, r *http.Request) {
 		respondError(rw, err)
 		return
 	}
-	rw.Write([]byte(message))
+	respondMessage(rw, message)
 }
 
 func respondError(rw http.ResponseWriter, err error) {
 	log.Print(err)
 	rw.WriteHeader(http.StatusBadRequest)
+}
+
+func respondMessage(rw http.ResponseWriter, message string) {
+	rw.Write([]byte(message))
 }
 
 func logMessage(from string, to string, message string) error {
